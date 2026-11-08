@@ -1,0 +1,12 @@
+{
+  "name": "@compulim/common",
+  "version": "0.0.0-0",
+  "private": true,
+  "description": "",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  }
+}
