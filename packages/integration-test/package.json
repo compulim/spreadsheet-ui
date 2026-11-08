@@ -17,7 +17,7 @@
     "bump:prod": "PACKAGES_TO_BUMP=$(cat package.json | jq -r '(.pinDependencies // {}) as $P | (.localPeerDependencies // {}) as $L | (.dependencies // {}) | to_entries | map(select(.key as $K | $L | has($K) | not)) | map(.key + \"@\" + ($P[.key] // [\"latest\"])[0]) | join(\" \")') && [ ! -z \"$PACKAGES_TO_BUMP\" ] && npm install $PACKAGES_TO_BUMP || true",
     "docker": "docker compose up --quiet-pull --scale chromium=4",
     "postscaffold": "npm run postscaffold:dev --if-present && npm run postscaffold:prod --if-present",
-    "postscaffold:dev": "npm install --save-dev $(cat ../common/package.json | jq -r \".name + \\\"@\\\" + .version\") @happy-dom/global-registrator @tsconfig/strictest expect resolve-cwd typescript",
+    "postscaffold:dev": "npm install --save-dev $(cat ../common/package.json | jq -r \".name + \\\"@\\\" + .version\") @onting/harness @onting/stub @types/node ci-info @happy-dom/global-registrator @tsconfig/strictest expect resolve-cwd typescript",
     "postscaffold:prod": "npm install --save $(cat ../test-harness/package.json | jq -r \".name + \\\"@\\\" + .version\") @compulim/spreadsheet-ui@0.0.0-0",
     "posttest": "if test \"$CI\" = \"true\"; then docker compose logs; docker compose down; fi",
     "precommit": "ESLINT_USE_FLAT_CONFIG=false eslint --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts ./",
@@ -38,7 +38,11 @@
   "devDependencies": {
     "@compulim/common": "^0.0.0-0",
     "@happy-dom/global-registrator": "^21.0.4",
+    "@onting/harness": "^0.1.1-main.202610281013.190bd01",
+    "@onting/stub": "^0.1.0-main.202610280858.20698c0",
     "@tsconfig/strictest": "^2.0.8",
+    "@types/node": "^26.6.6",
+    "ci-info": "^4.4.0",
     "expect": "^30.5.2",
     "resolve-cwd": "^3.0.0",
     "typescript": "^6.0.3"

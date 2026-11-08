@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
-    "ignoreDeprecations": "6.0"
+    "ignoreDeprecations": "6.0",
+    "allowJs": true
   },
   "extends": "@tsconfig/recommended/tsconfig.json"
 }

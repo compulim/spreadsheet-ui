@@ -4,34 +4,22 @@
   "private": true,
   "description": "",
   "scripts": {
-    "build": "esbuild --bundle --entry-names=[name]/[ext]/main --jsx=transform --minify --outdir=./public/static/ --sourcemap $(find ./src -mindepth 1 -maxdepth 1 -type d -printf '%f=./src/%f/index.tsx ')",
+    "build": "esbuild --bundle --entry-names=[name]/[ext]/main --format=esm --jsx=automatic --loader:.woff=file --loader:.woff2=file --minify --outdir=./public/static/ --sourcemap $(find ./src -mindepth 1 -maxdepth 1 -type d -printf '%f=./src/%f/index.tsx ')",
     "bump": "npm run bump:prod && npm run bump:dev",
     "bump:dev": "PACKAGES_TO_BUMP=$(cat package.json | jq -r '(.pinDependencies // {}) as $P | (.localPeerDependencies // {}) as $L | (.devDependencies // {}) | to_entries | map(select(.key as $K | $L | has($K) | not)) | map(.key + \"@\" + ($P[.key] // [\"latest\"])[0]) | join(\" \")') && [ ! -z \"$PACKAGES_TO_BUMP\" ] && npm install $PACKAGES_TO_BUMP || true",
     "bump:prod": "PACKAGES_TO_BUMP=$(cat package.json | jq -r '(.pinDependencies // {}) as $P | (.localPeerDependencies // {}) as $L | (.dependencies // {}) | to_entries | map(select(.key as $K | $L | has($K) | not)) | map(.key + \"@\" + ($P[.key] // [\"latest\"])[0]) | join(\" \")') && [ ! -z \"$PACKAGES_TO_BUMP\" ] && npm install $PACKAGES_TO_BUMP || true",
     "postscaffold": "npm run postscaffold:dev --if-present && npm run postscaffold:prod --if-present",
-    "postscaffold:dev": "npm install --save-dev $(cat ../common/package.json | jq -r \".name + \\\"@\\\" + .version\") @tsconfig/strictest @types/react@18 @types/react-dom@18 esbuild typescript",
-    "postscaffold:prod": "npm install --save react@18 react-dom@18 @compulim/spreadsheet-ui@0.0.0-0",
+    "postscaffold:dev": "npm install --save-dev $(cat ../common/package.json | jq -r \".name + \\\"@\\\" + .version\") @tsconfig/strictest @types/node @types/react @types/react-dom esbuild typescript",
+    "postscaffold:prod": "npm install --save @primer/octicons-react @primer/primitives @primer/react react react-dom react-is valibot @compulim/spreadsheet-ui@0.0.0-0",
     "precommit": "npm run precommit:eslint && npm run precommit:typescript",
     "precommit:eslint": "ESLINT_USE_FLAT_CONFIG=false eslint --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts ./src/",
     "precommit:typescript": "tsc --project ./src/tsconfig.json",
     "reinstall": "rm -r node_modules package-lock.json && npm install",
     "start": "npm run build -- --define:IS_DEVELOPMENT=true --servedir=./public --watch",
-    "switch": "cat package.json | jq --arg SWITCH_NAME $SWITCH_NAME -r '(.[\"switch:\" + $SWITCH_NAME] // {}) as $TEMPLATE | .devDependencies += ($TEMPLATE.devDependencies // {}) | .dependencies += ($TEMPLATE.dependencies // {})' | tee ./package.json.tmp && mv ./package.json.tmp ./package.json"
+    "switch": "cat package.json | jq --arg SWITCH_NAME $SWITCH_NAME -r '(.[\"switch:\" + $SWITCH_NAME] // {}) as $TEMPLATE | .devDependencies += ($TEMPLATE.devDependencies // {}) | .dependencies += ($TEMPLATE.dependencies // {})' | tee ./package.json.tmp && mv ./package.json.tmp ./package.json",
+    "test": "node --experimental-strip-types --import ./happy-dom.import.ts --test"
   },
-  "pinDependencies": {
-    "@types/react": [
-      "18"
-    ],
-    "@types/react-dom": [
-      "18"
-    ],
-    "react": [
-      "18"
-    ],
-    "react-dom": [
-      "18"
-    ]
-  },
+  "pinDependencies": {},
   "localPeerDependencies": {
     "@compulim/common": "0.0.0-0",
     "@compulim/spreadsheet-ui": "0.0.0-0"
@@ -39,9 +27,11 @@
   "author": "William Wong (https://github.com/compulim)",
   "devDependencies": {
     "@compulim/common": "^0.0.0-0",
+    "@happy-dom/global-registrator": "^21.0.4",
     "@tsconfig/strictest": "^2.0.8",
-    "@types/react": "^18.3.31",
-    "@types/react-dom": "^18.3.7",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "esbuild": "^0.28.2",
     "typescript": "^6.0.3"
   },
@@ -49,7 +39,12 @@
   "license": "MIT",
   "dependencies": {
     "@compulim/spreadsheet-ui": "^0.0.0-0",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1"
+    "@primer/octicons-react": "^19.42.0",
+    "@primer/primitives": "^11.10.0",
+    "@primer/react": "^38.45.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-is": "^19.3.1",
+    "valibot": "^1.5.0"
   }
 }
