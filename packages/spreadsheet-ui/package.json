@@ -5,12 +5,12 @@
   "publishConfig": {
     "access": "public"
   },
-  "main": "./dist/spreadsheet-ui.js",
-  "typings": "./dist/spreadsheet-ui.d.ts",
+  "main": "./dist/index.js",
+  "typings": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/spreadsheet-ui.d.ts",
-      "default": "./dist/spreadsheet-ui.js"
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
     }
   },
   "files": [
