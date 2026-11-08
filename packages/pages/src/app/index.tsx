@@ -1,11 +1,7 @@
-import {
-  formatValue,
-  parseHighlight,
-  stringifyHighlight,
-  getColumnName,
-  WorksheetApp,
-  WorksheetSelection
-} from '@compulim/spreadsheet-ui';
+import { WorksheetApp, WorksheetSelection } from '@compulim/spreadsheet-ui';
+import { formatValue } from './formatValue.ts';
+import { getColumnName } from './getColumnName.ts';
+import { parseHighlight, stringifyHighlight } from './highlight.ts';
 import { HIGHLIGHTS } from './highlights.ts';
 import { cellsToPNG } from './printCells.ts';
 import { MAX_WORKSHEETS } from './workbook/constants.ts';
@@ -18,9 +14,9 @@ import type {
   CellFormatting,
   CellNumberFormat,
   FormattingUpdater,
-  Worksheet,
-  WorksheetEvent
+  Worksheet
 } from '@compulim/spreadsheet-ui';
+import type { WorksheetEvent } from './workbook/WorksheetEvent.ts';
 
 /**
  * Number of leading rows and columns that become read-only, and frozen on screen, when the lock button is pressed.

@@ -1,4 +1,4 @@
-import type { Worksheet } from './Worksheet.ts';
+import type { Worksheet } from '@compulim/spreadsheet-ui';
 
 class WorksheetEvent extends Event {
   readonly worksheet: Worksheet;

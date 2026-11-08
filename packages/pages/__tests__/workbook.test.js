@@ -3,11 +3,11 @@ import { describe, test } from 'node:test';
 
 import { WorksheetChangeEvent } from '@compulim/spreadsheet-ui';
 import { MAX_WORKSHEETS } from '../src/app/workbook/constants.ts';
-import { COLUMN_COUNT, ROW_COUNT } from '@compulim/spreadsheet-ui';
-import { getColumnName } from '@compulim/spreadsheet-ui';
+const COLUMN_COUNT = 50;
+const ROW_COUNT = 10_000;
+import { getColumnName } from '../src/app/getColumnName.ts';
 import { Workbook } from '../src/app/workbook/Workbook.ts';
 import { Worksheet } from '@compulim/spreadsheet-ui';
-import { WorksheetHistory } from '@compulim/spreadsheet-ui';
 import { createZip } from '../src/app/zip.ts';
 
 describe('Worksheet', () => {
@@ -126,7 +126,7 @@ describe('Worksheet', () => {
   test('undo and redo', async () => {
     const tick = () => new Promise(resolve => setTimeout(resolve));
     const worksheet = new Worksheet();
-    const history = new WorksheetHistory(worksheet);
+    const history = worksheet;
 
     assert.equal(history.undo(), false);
     assert.equal(history.redo(), false);
@@ -318,7 +318,7 @@ describe('Worksheet', () => {
     assert.deepEqual(Worksheet.fromCSV(csv).getValues(0, 0, 6, 6), worksheet.getValues(0, 0, 6, 6));
 
     const loaded = new Worksheet();
-    const history = new WorksheetHistory(loaded);
+    const history = loaded;
 
     loaded.edit(edit => edit.loadCSV(csv));
     assert.equal(history.canUndo, false);
@@ -688,7 +688,7 @@ test('Worksheet formatting is not kept on empty cells', () => {
 test('Worksheet undo/redo formatting', async () => {
   const nextTask = () => new Promise(resolve => setTimeout(resolve));
   const worksheet = new Worksheet({ columnCount: 3, rowCount: 3 });
-  const history = new WorksheetHistory(worksheet);
+  const history = worksheet;
 
   worksheet.edit(edit => edit.setValue(0, 0, 'ABC'));
   await nextTask();

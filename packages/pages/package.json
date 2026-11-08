@@ -10,7 +10,7 @@
     "bump:prod": "PACKAGES_TO_BUMP=$(cat package.json | jq -r '(.pinDependencies // {}) as $P | (.localPeerDependencies // {}) as $L | (.dependencies // {}) | to_entries | map(select(.key as $K | $L | has($K) | not)) | map(.key + \"@\" + ($P[.key] // [\"latest\"])[0]) | join(\" \")') && [ ! -z \"$PACKAGES_TO_BUMP\" ] && npm install $PACKAGES_TO_BUMP || true",
     "postscaffold": "npm run postscaffold:dev --if-present && npm run postscaffold:prod --if-present",
     "postscaffold:dev": "npm install --save-dev $(cat ../common/package.json | jq -r \".name + \\\"@\\\" + .version\") @tsconfig/strictest @types/node @types/react @types/react-dom esbuild typescript",
-    "postscaffold:prod": "npm install --save @primer/octicons-react @primer/primitives @primer/react react react-dom react-is @compulim/spreadsheet-ui@0.0.0-0",
+    "postscaffold:prod": "npm install --save @primer/octicons-react @primer/primitives @primer/react react react-dom react-is valibot @compulim/spreadsheet-ui@0.0.0-0",
     "precommit": "npm run precommit:eslint && npm run precommit:typescript",
     "precommit:eslint": "ESLINT_USE_FLAT_CONFIG=false eslint --ext .js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts ./src/",
     "precommit:typescript": "tsc --project ./src/tsconfig.json",
@@ -44,6 +44,7 @@
     "@primer/react": "^38.45.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "react-is": "^19.3.1"
+    "react-is": "^19.3.1",
+    "valibot": "^1.5.0"
   }
 }

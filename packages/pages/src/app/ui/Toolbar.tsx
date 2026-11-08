@@ -18,7 +18,7 @@ import { ActionBar, ActionList, ActionMenu, SegmentedControl, Text, TextInput, T
 import { useSyncExternalStore } from 'react';
 import type { RefObject } from 'react';
 import { HIGHLIGHTS } from '../highlights.ts';
-import { parseHighlight } from '@compulim/spreadsheet-ui';
+import { parseHighlight } from '../highlight.ts';
 import type { CellAlign, CellNumberFormat } from '@compulim/spreadsheet-ui';
 import { MarkerIcon, UnderlineIcon } from './icons.tsx';
 

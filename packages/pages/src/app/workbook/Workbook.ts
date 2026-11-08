@@ -1,5 +1,6 @@
 import { createZip, readZip } from '../zip.ts';
-import { WorksheetChangeEvent, Worksheet, WorksheetEvent } from '@compulim/spreadsheet-ui';
+import { WorksheetChangeEvent, Worksheet } from '@compulim/spreadsheet-ui';
+import { WorksheetEvent } from './WorksheetEvent.ts';
 import { MAX_WORKSHEET_NAME_LENGTH, MAX_WORKSHEETS } from './constants.ts';
 import { sanitizeWorksheetName, validateWorksheetName } from './private/worksheetName.ts';
 
@@ -138,8 +139,8 @@ class Workbook extends EventTarget {
 
     index = Math.max(0, Math.min(index, this.#worksheets.length));
 
-    const element = (globalThis.customElements?.get('worksheet-app') &&
-      document.createElement('worksheet-app')) as WorksheetApp | undefined;
+    const element = (globalThis.customElements?.get('worksheet-app') && document.createElement('worksheet-app')) as
+      WorksheetApp | undefined;
     const worksheet = element ? element.worksheet : new Worksheet();
 
     element && this.#elements.set(worksheet, element);

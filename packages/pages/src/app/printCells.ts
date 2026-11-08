@@ -1,4 +1,4 @@
-import { formatValue } from '@compulim/spreadsheet-ui';
+import { formatValue } from './formatValue.ts';
 import type { CellValue, CellBorder, CellFormatting } from '@compulim/spreadsheet-ui';
 
 type GetFormatting = (column: number, row: number) => Partial<CellFormatting> | undefined;
