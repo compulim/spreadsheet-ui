@@ -1,5 +1,5 @@
-import { type Highlight } from './highlight.ts';
-import {
+export { type Highlight } from './highlight.ts';
+export {
   type BorderEdges,
   type CellAlign,
   type CellBorder,
@@ -23,37 +23,6 @@ import {
   type WorksheetRedo,
   type WorksheetUndo
 } from './Worksheet.ts';
-import { WorksheetApp } from './WorksheetApp.ts';
-import { WorksheetChangeEvent } from './WorksheetChangeEvent.ts';
-import { type CellPosition, type CellRange, WorksheetSelection } from './WorksheetSelection.ts';
-
-export {
-  Worksheet,
-  WorksheetApp,
-  WorksheetChangeEvent,
-  WorksheetSelection,
-  type BorderEdges,
-  type CellAlign,
-  type CellBorder,
-  type CellBorderChange,
-  type CellChange,
-  type CellFormatting,
-  type CellFormattingChange,
-  type CellInput,
-  type CellMerge,
-  type CellMergeChange,
-  type CellMergeSize,
-  type CellNumberFormat,
-  type CellPosition,
-  type CellRange,
-  type CellUpdater,
-  type CellValue,
-  type CellValueChange,
-  type FormattingInput,
-  type FormattingUpdater,
-  type Highlight,
-  type WorksheetChange,
-  type WorksheetEdit,
-  type WorksheetRedo,
-  type WorksheetUndo
-};
+export { WorksheetApp } from './WorksheetApp.ts';
+export { WorksheetChangeEvent } from './WorksheetChangeEvent.ts';
+export { type CellPosition, type CellRange, WorksheetSelection } from './WorksheetSelection.ts';
