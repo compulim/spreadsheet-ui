@@ -138,8 +138,8 @@ class Workbook extends EventTarget {
 
     index = Math.max(0, Math.min(index, this.#worksheets.length));
 
-    const element = (globalThis.customElements?.get('compulim-worksheet') &&
-      document.createElement('compulim-worksheet')) as WorksheetApp | undefined;
+    const element = (globalThis.customElements?.get('worksheet-app') &&
+      document.createElement('worksheet-app')) as WorksheetApp | undefined;
     const worksheet = element ? element.worksheet : new Worksheet();
 
     element && this.#elements.set(worksheet, element);
