@@ -16,7 +16,6 @@ import type {
   FormattingUpdater,
   Worksheet
 } from '@compulim/spreadsheet-ui';
-import type { WorksheetEvent } from './workbook/WorksheetEvent.ts';
 
 /**
  * Number of leading rows and columns that become read-only, and frozen on screen, when the lock button is pressed.
@@ -70,7 +69,7 @@ const ui = mountUI(
   // Menus return focus to the grid after closing.
   {
     get current() {
-      return (activeElement ?? null) as HTMLElement;
+      return activeElement as HTMLElement;
     }
   }
 );
@@ -79,40 +78,45 @@ const gridContainer = document.getElementById('grid-container') as HTMLElement;
 const sheetTabs = document.getElementById('sheet-tabs') as HTMLElement;
 const addSheetButton = document.getElementById('add-sheet-button') as HTMLButtonElement;
 
-/** `<worksheet-app>` of the active worksheet. */
-let activeElement: WorksheetApp | undefined;
+/**
+ * The single `<worksheet-app>`, editing a copy of the active worksheet. Its worksheet is loaded from the active
+ * worksheet of the workbook when activated, and every change is saved back to the workbook.
+ */
+const activeElement = document.createElement('worksheet-app') as WorksheetApp;
+
+/** Worksheet of the workbook being edited by `activeElement`. */
+let activeWorksheet: Worksheet | undefined;
+
+/** Whether `activeElement` is loading the active worksheet, its changes do not need to be saved back. */
+let loadingActiveWorksheet = false;
 
 let locked = false;
 
-function getElement(worksheet: Worksheet) {
-  return workbook.getWorksheetApp(worksheet) as WorksheetApp;
+function saveActiveWorksheet() {
+  if (!loadingActiveWorksheet && activeWorksheet && workbook.indexOf(activeWorksheet) !== -1) {
+    const json = activeElement.worksheet.toJSON();
+
+    activeWorksheet.edit(edit => edit.loadJSON(json));
+  }
 }
 
-/**
- * Shows the `<worksheet-app>` instantiated by the workbook for a worksheet.
- */
-function mountWorksheet(worksheet: Worksheet) {
-  const element = getElement(worksheet);
-
-  element.setAttribute('locked-column-count', String(LOCKED_COLUMN_COUNT));
-  element.setAttribute('locked-row-count', String(LOCKED_ROW_COUNT));
-  element.toggleAttribute('locked', locked);
-  element.hidden = true;
-  // The active cell value may have changed.
-  worksheet.addEventListener('change', () => element === activeElement && updateSelectionInfo());
-  worksheet.addEventListener('selectionchange', () => element === activeElement && updateSelectionInfo());
-  worksheet.addEventListener('historychange', () => element === activeElement && updateUndoButtons());
-  element.addEventListener('lockedit', () => showStatus('Some cells are locked and cannot be edited.'));
-  gridContainer.append(element);
-}
-
-function handleWorksheetAdd(event: Event) {
-  mountWorksheet((event as WorksheetEvent).worksheet);
-}
+activeElement.setAttribute('locked-column-count', String(LOCKED_COLUMN_COUNT));
+activeElement.setAttribute('locked-row-count', String(LOCKED_ROW_COUNT));
+// The active cell value may have changed.
+activeElement.worksheet.addEventListener('change', () => {
+  saveActiveWorksheet();
+  updateSelectionInfo();
+  updateFormattingButtons();
+  updateUndoButtons();
+});
+activeElement.worksheet.addEventListener('columnwidthchange', saveActiveWorksheet);
+activeElement.worksheet.addEventListener('selectionchange', () => updateSelectionInfo());
+activeElement.worksheet.addEventListener('historychange', () => updateUndoButtons());
+activeElement.addEventListener('lockedit', () => showStatus('Some cells are locked and cannot be edited.'));
 
 /** Active cell and selection of the active worksheet. */
 function getSelection() {
-  return activeElement ? activeElement.worksheet.selection : new WorksheetSelection({ column: 0, row: 0 });
+  return activeElement.worksheet.selection;
 }
 
 /**
@@ -145,7 +149,7 @@ function download(blob: Blob, fileName: string) {
 }
 
 function renderTabs() {
-  const active = activeElement?.worksheet;
+  const active = activeWorksheet;
   const worksheets = workbook.worksheets;
 
   sheetTabs.replaceChildren(
@@ -189,17 +193,24 @@ function renderTabs() {
 }
 
 function activateWorksheet(worksheet: Worksheet) {
-  const element = getElement(worksheet);
+  saveActiveWorksheet();
 
-  for (const other of workbook.worksheets) {
-    getElement(other).hidden = other !== worksheet;
+  const json = worksheet.toJSON();
+
+  activeWorksheet = worksheet;
+  loadingActiveWorksheet = true;
+
+  try {
+    activeElement.worksheet.edit(edit => edit.loadJSON(json));
+  } finally {
+    loadingActiveWorksheet = false;
   }
 
-  activeElement = element;
+  activeElement.worksheet.selection = new WorksheetSelection({ column: 0, row: 0 });
   renderTabs();
   updateUndoButtons();
   updateFormattingButtons();
-  activeElement?.focus();
+  activeElement.focus();
 }
 
 function renameWorksheet(worksheet: Worksheet) {
@@ -225,7 +236,7 @@ function deleteWorksheet(worksheet: Worksheet) {
 
   workbook.removeWorksheet(worksheet);
 
-  if (activeElement?.worksheet === worksheet) {
+  if (activeWorksheet === worksheet) {
     activateWorksheet(workbook.worksheets[Math.min(index, workbook.worksheets.length - 1)]!);
   }
 }
@@ -238,25 +249,19 @@ function setWorkbook(nextWorkbook: Workbook) {
   if (workbook) {
     workbook.removeEventListener('worksheetadd', renderTabs);
     workbook.removeEventListener('worksheetremove', renderTabs);
-    workbook.removeEventListener('worksheetadd', handleWorksheetAdd);
     workbook.removeEventListener('worksheetrename', renderTabs);
-    workbook.removeEventListener('change', updateUndoButtons);
-    workbook.removeEventListener('change', updateFormattingButtons);
   }
 
   workbook = nextWorkbook;
   workbook.addEventListener('worksheetadd', renderTabs);
   workbook.addEventListener('worksheetremove', renderTabs);
-  workbook.addEventListener('worksheetadd', handleWorksheetAdd);
   workbook.addEventListener('worksheetrename', renderTabs);
-  workbook.addEventListener('change', updateUndoButtons);
-  workbook.addEventListener('change', updateFormattingButtons);
 
   // Expose for scripting from the browser console, e.g. `app.workbook.worksheets[0].edit(edit => edit.setValue(0, 0, 'Hello'))`.
   Object.assign(globalThis, { app: { workbook } });
 
-  gridContainer.replaceChildren();
-  workbook.worksheets.forEach(mountWorksheet);
+  activeWorksheet = undefined;
+  gridContainer.replaceChildren(activeElement);
   activateWorksheet(workbook.worksheets[0]!);
 }
 
@@ -267,7 +272,7 @@ function updateSelectionInfo() {
 
   ui.update({
     nameBox: left === right && top === bottom ? topLeft : `${topLeft}:${getColumnName(right)}${bottom + 1}`,
-    valueBox: activeElement ? formatValue(activeElement.worksheet.getValue(column, row)) : ''
+    valueBox: formatValue(activeElement.worksheet.getValue(column, row))
   });
   updateFormattingButtons();
 }
@@ -277,7 +282,7 @@ function updateSelectionInfo() {
  * If the selection has no contentful cells, checks the active cell instead.
  */
 function isFormattingAppliedToSelection(predicate: (formatting: CellFormatting | undefined) => boolean) {
-  const worksheet = activeElement?.worksheet;
+  const worksheet = activeElement.worksheet;
 
   if (!worksheet) {
     return false;
@@ -327,7 +332,7 @@ function updateFormattingButtons() {
 
 /** Whether every selected cell is in a merged cell. */
 function isSelectionMerged() {
-  const worksheet = activeElement?.worksheet;
+  const worksheet = activeElement.worksheet;
 
   if (!worksheet) {
     return false;
@@ -348,7 +353,7 @@ function isSelectionMerged() {
 }
 
 function formatSelection(updater: FormattingUpdater) {
-  const worksheet = activeElement?.worksheet;
+  const worksheet = activeElement.worksheet;
 
   if (worksheet) {
     const { left, top, right, bottom } = getSelection().range;
@@ -358,7 +363,7 @@ function formatSelection(updater: FormattingUpdater) {
     updateUndoButtons();
   }
 
-  activeElement?.focus();
+  activeElement.focus();
 }
 
 function toggleAlign(align: CellAlign) {
@@ -397,7 +402,7 @@ gridContainer.addEventListener('keydown', event => {
 });
 
 function mergeSelection() {
-  const worksheet = activeElement?.worksheet;
+  const worksheet = activeElement.worksheet;
 
   if (worksheet) {
     const { left, top, right, bottom } = getSelection().range;
@@ -426,22 +431,22 @@ function mergeSelection() {
     updateUndoButtons();
   }
 
-  activeElement?.focus();
+  activeElement.focus();
 }
 
 function updateUndoButtons() {
-  const { canUndo, canRedo } = activeElement?.worksheet ?? { canUndo: false, canRedo: false };
+  const { canUndo, canRedo } = activeElement.worksheet;
 
   ui.update({ canRedo, canUndo });
 }
 
 function undoOrRedo(action: 'undo' | 'redo') {
-  if (activeElement?.worksheet[action]()) {
+  if (activeElement.worksheet[action]()) {
     updateFormattingButtons();
     updateSelectionInfo();
   }
 
-  activeElement?.focus();
+  activeElement.focus();
 }
 
 document.addEventListener('keydown', event => {
@@ -476,7 +481,7 @@ addSheetButton.addEventListener('click', () => {
 });
 
 function setBorder(preset: BorderPreset) {
-  const worksheet = activeElement?.worksheet;
+  const worksheet = activeElement.worksheet;
 
   if (worksheet) {
     const { left, top, right, bottom } = getSelection().range;
@@ -493,18 +498,16 @@ function setBorder(preset: BorderPreset) {
     updateUndoButtons();
   }
 
-  activeElement?.focus();
+  activeElement.focus();
 }
 
 function setLocked(nextLocked: boolean) {
   locked = nextLocked;
 
-  for (const worksheet of workbook.worksheets) {
-    getElement(worksheet).toggleAttribute('locked', locked);
-  }
+  activeElement.toggleAttribute('locked', locked);
 
   ui.update({ locked });
-  activeElement?.focus();
+  activeElement.focus();
 }
 
 fileInput.addEventListener('change', async () => {
@@ -544,13 +547,13 @@ fileInput.addEventListener('change', async () => {
 });
 
 function saveCSV() {
-  const worksheet = activeElement?.worksheet;
+  const worksheet = activeElement.worksheet;
 
   if (worksheet) {
     // Byte order mark so Excel recognizes the file as UTF-8.
     download(
       new Blob(['\ufeff', worksheet.toCSV()], { type: 'text/csv' }),
-      `${workbook.getWorksheetName(worksheet)}.csv`
+      `${workbook.getWorksheetName(activeWorksheet!)}.csv`
     );
   }
 }
@@ -564,7 +567,7 @@ async function saveZip() {
 }
 
 async function printSelection() {
-  const worksheet = activeElement?.worksheet;
+  const worksheet = activeElement.worksheet;
 
   if (!worksheet) {
     return;
@@ -607,7 +610,7 @@ async function printSelection() {
 
     download(
       await cellsToPNG(rows, { columnWidths, getBorder, getColumnSpan, getFormatting, getRowSpan }),
-      `${workbook.getWorksheetName(worksheet)}.png`
+      `${workbook.getWorksheetName(activeWorksheet!)}.png`
     );
   } catch (error) {
     alert(`Failed to print selected cells: ${(error as Error).message}`);
