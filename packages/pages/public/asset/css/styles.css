@@ -1,0 +1,469 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  font-family:
+    'Segoe UI',
+    system-ui,
+    -apple-system,
+    sans-serif;
+  font-size: 14px;
+  color: #222;
+}
+
+/* #region Layout */
+
+/* Root of ThemeProvider, BaseStyles and PageLayout. */
+.root,
+.root > *,
+.app,
+.app__layout {
+  height: 100%;
+}
+
+/* Stacks header, content and footer of the page layout vertically, the content takes the remaining height. */
+.app__layout > * {
+  flex-direction: column;
+  flex-wrap: nowrap;
+}
+
+.app__content,
+.app__content > * {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.app__header,
+.app__footer {
+  flex: none;
+  margin: 0;
+}
+
+/* #endregion */
+
+/* #region Toolbar */
+
+.toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--base-size-8);
+}
+
+.toolbar__row {
+  align-items: center;
+  display: flex;
+  gap: var(--base-size-8);
+}
+
+/* Takes its natural width and shrinks into the overflow menu when the toolbar is too narrow. */
+.toolbar__action-bar {
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.toolbar__action-bar [aria-pressed='true'] {
+  background-color: var(--button-invisible-bgColor-active);
+  color: var(--fgColor-accent);
+}
+
+.toolbar__marker-icon {
+  font-weight: bold;
+}
+
+.toolbar__lock {
+  align-items: center;
+  display: flex;
+  gap: var(--base-size-8);
+}
+
+.toolbar__name-box {
+  flex: none;
+  width: 120px;
+}
+
+.toolbar__status {
+  color: var(--fgColor-danger);
+  flex: none;
+}
+
+/* #endregion */
+
+/* #region Grid */
+
+.grid-container {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+worksheet-app {
+  display: block;
+  height: 100%;
+}
+
+worksheet-app[hidden] {
+  display: none;
+}
+
+.grid {
+  --grid-line-shadow: inset -1px -1px 0 0 #e2e2e2;
+
+  contain: strict;
+  height: 100%;
+  outline: none;
+  overflow: auto;
+  overscroll-behavior: contain;
+  position: relative;
+  width: 100%;
+}
+
+.grid__content {
+  position: relative;
+}
+
+.grid__header {
+  display: flex;
+  height: var(--row-height);
+  position: sticky;
+  top: 0;
+  z-index: 4;
+}
+
+.grid__corner,
+.grid__column-header,
+.grid__row-header {
+  background: #f3f3f3;
+  border-bottom: 1px solid #d0d0d0;
+  border-right: 1px solid #d0d0d0;
+  color: #555;
+  font-size: 12px;
+  line-height: calc(var(--row-height) - 1px);
+  text-align: center;
+  user-select: none;
+}
+
+.grid__corner {
+  flex: none;
+  left: 0;
+  position: sticky;
+  width: var(--row-header-width);
+  z-index: 1;
+}
+
+.grid__column-header {
+  flex: none;
+  width: var(--column-width);
+}
+
+.grid__column-header--selected,
+.grid__row-header--selected {
+  background: #d3e3fd;
+  color: #0b57d0;
+  font-weight: 600;
+}
+
+.grid__body {
+  position: relative;
+}
+
+.grid__row {
+  display: flex;
+  height: var(--row-height);
+  left: 0;
+  position: absolute;
+  width: 100%;
+}
+
+.grid__row-header {
+  flex: none;
+  left: 0;
+  position: sticky;
+  width: var(--row-header-width);
+  z-index: 2;
+}
+
+.grid__cell {
+  /* Grid lines are drawn as inset shadows (not borders), so user-set borders (also shadows) can cover them seamlessly. */
+  box-shadow: var(--grid-line-shadow);
+  flex: none;
+  line-height: calc(var(--row-height) - 1px);
+  overflow: hidden;
+  padding: 0 4px;
+  text-overflow: ellipsis;
+  white-space: pre;
+  width: var(--column-width);
+}
+
+.grid__cell[data-border-corner] {
+  position: relative;
+}
+
+/* Fills the parts of border junctions inside the cell, above the grid line shadows, so borders join without a notch. */
+.grid__cell[data-border-corner]::after {
+  background: var(--border-corners);
+  content: '';
+  inset: 0;
+  pointer-events: none;
+  position: absolute;
+}
+
+.grid__cell[data-type='number'] {
+  text-align: right;
+}
+
+.grid__cell[data-type='boolean'] {
+  text-align: center;
+}
+
+.grid__cell--bold {
+  font-weight: bold;
+}
+
+.grid__cell--italic {
+  font-style: italic;
+}
+
+/*
+ * Fluorescent marker: the background of an inline box spans the font ascent to descent, so the lower half starts at the
+ * center of the font and ends below the baseline. Padding extends it sideways, negative margin keeps the text in place.
+ */
+.grid__cell-text--marker {
+  background: linear-gradient(to bottom, transparent 60%, var(--marker-color) 50%);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  margin: 0 -0.2em;
+  padding: 0 0.2em;
+}
+
+.grid__cell[data-align='left'] {
+  text-align: left;
+}
+
+.grid__cell[data-align='center'] {
+  text-align: center;
+}
+
+.grid__cell[data-align='right'] {
+  text-align: right;
+}
+
+/* Accounting style: "$" sticks to the left, the amount to the right, regardless of alignment. */
+.grid__cell[data-format='currency'] {
+  text-align: right;
+}
+
+.grid__cell[data-format='currency']::before {
+  content: '$';
+  float: left;
+}
+
+/* Negative amounts are wrapped in parentheses. An invisible ")" keeps positive amounts aligned with negative ones. */
+.grid__cell[data-format='currency'] .grid__cell-text::after {
+  color: transparent;
+  content: ')';
+}
+
+.grid__cell[data-format='currency'].grid__cell--negative .grid__cell-text::before {
+  content: '(';
+}
+
+.grid__cell[data-format='currency'].grid__cell--negative .grid__cell-text::after {
+  color: inherit;
+}
+
+.grid__cell[data-format='percent'] .grid__cell-text::after {
+  content: '%';
+}
+
+/* While locked, the locked leading rows/columns are frozen (always shown). */
+.grid__frozen {
+  display: none;
+}
+
+.grid--locked .grid__frozen {
+  background: #fff;
+  display: block;
+  position: sticky;
+  top: var(--row-height);
+  z-index: 4;
+}
+
+.grid__frozen .grid__row {
+  position: relative;
+}
+
+.grid--locked .grid__body {
+  margin-top: calc(-1 * var(--locked-row-count) * var(--row-height));
+}
+
+.grid--locked .grid__lockable {
+  left: var(--sticky-left);
+  position: sticky;
+  z-index: 2;
+}
+
+.grid--locked .grid__frozen .grid__row:last-child > * {
+  border-bottom-color: #999;
+}
+
+.grid--locked .grid__lockable:not(:has(+ .grid__lockable)) {
+  border-right-color: #999;
+}
+
+.grid--locked .grid__frozen .grid__row:last-child > .grid__cell {
+  --grid-line-shadow: inset 0 -1px 0 0 #999, inset -1px 0 0 0 #e2e2e2;
+}
+
+.grid--locked .grid__cell.grid__lockable:not(:has(+ .grid__lockable)) {
+  --grid-line-shadow: inset -1px 0 0 0 #999, inset 0 -1px 0 0 #e2e2e2;
+}
+
+.grid--locked .grid__frozen .grid__row:last-child > .grid__cell.grid__lockable:not(:has(+ .grid__lockable)) {
+  --grid-line-shadow: inset -1px -1px 0 0 #999;
+}
+
+/* Lockable rows/columns are configured in code, they are only read-only when the grid is locked. */
+.grid--locked .grid__lockable,
+.grid--locked .grid__row--lockable .grid__cell,
+.grid--locked .grid__row--lockable .grid__row-header {
+  background-color: #f1f1f1;
+  color: #777;
+}
+
+.grid--locked .grid__column-header.grid__lockable::after,
+.grid--locked .grid__row--lockable .grid__row-header::after {
+  content: ' 🔒';
+  font-size: 10px;
+}
+
+.grid--resize-hover,
+.grid--resize-hover * {
+  cursor: col-resize;
+}
+
+.grid__range {
+  background: rgb(11 87 208 / 10%);
+  border: 1px solid #0b57d0;
+  pointer-events: none;
+  position: absolute;
+  z-index: 1;
+}
+
+.grid__active {
+  border: 2px solid #0b57d0;
+  height: var(--row-height);
+  pointer-events: none;
+  position: absolute;
+  width: var(--column-width);
+  z-index: 1;
+}
+
+.grid:not(:focus-within) .grid__active {
+  border-color: #888;
+}
+
+.grid__editor {
+  border: 2px solid #0b57d0;
+  box-sizing: border-box;
+  font: inherit;
+  height: var(--row-height);
+  margin: 0;
+  min-width: 0;
+  outline: none;
+  padding: 0 2px;
+  position: absolute;
+  z-index: 3;
+}
+
+.grid__editor[hidden] {
+  display: none;
+}
+
+/* #endregion */
+
+/* #region Sheet bar */
+
+.sheet-bar {
+  align-items: stretch;
+  background: #f3f3f3;
+  display: flex;
+  flex: none;
+  height: 32px;
+}
+
+.sheet-bar__add {
+  background: none;
+  border: none;
+  border-right: 1px solid #ccc;
+  cursor: pointer;
+  flex: none;
+  font-size: 18px;
+  width: 36px;
+}
+
+.sheet-bar__add:hover {
+  background: #e3e3e3;
+}
+
+.sheet-bar__add:disabled {
+  color: #aaa;
+  cursor: default;
+}
+
+.sheet-bar__tabs {
+  display: flex;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
+.sheet-tab {
+  align-items: center;
+  border-right: 1px solid #ccc;
+  cursor: pointer;
+  display: flex;
+  flex: none;
+  gap: 4px;
+  padding: 0 6px 0 12px;
+  user-select: none;
+  white-space: pre;
+}
+
+.sheet-tab:hover {
+  background: #e8e8e8;
+}
+
+.sheet-tab[aria-selected='true'] {
+  background: #fff;
+  box-shadow: inset 0 -3px 0 #107c41;
+  color: #107c41;
+  font-weight: 600;
+}
+
+.sheet-tab__close {
+  background: none;
+  border: none;
+  border-radius: 3px;
+  color: #888;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 2px 4px;
+}
+
+.sheet-tab__close:hover {
+  background: #ddd;
+  color: #222;
+}
+
+/* #endregion */
