@@ -5,12 +5,66 @@
   "publishConfig": {
     "access": "public"
   },
-  "main": "./dist/spreadsheet-ui.js",
-  "typings": "./dist/spreadsheet-ui.d.ts",
+  "main": "./dist/index.js",
+  "typings": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/spreadsheet-ui.d.ts",
-      "default": "./dist/spreadsheet-ui.js"
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
     }
-  }
+  },
+  "files": [
+    "./*.js",
+    "./dist/"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "bump": "npm run bump:prod && npm run bump:dev",
+    "bump:dev": "PACKAGES_TO_BUMP=$(cat package.json | jq -r '(.pinDependencies // {}) as $P | (.localPeerDependencies // {}) as $L | (.devDependencies // {}) | to_entries | map(select(.key as $K | $L | has($K) | not)) | map(.key + \"@\" + ($P[.key] // [\"latest\"])[0]) | join(\" \")') && [ ! -z \"$PACKAGES_TO_BUMP\" ] && npm install $PACKAGES_TO_BUMP || true",
+    "bump:prod": "PACKAGES_TO_BUMP=$(cat package.json | jq -r '(.pinDependencies // {}) as $P | (.localPeerDependencies // {}) as $L | (.dependencies // {}) | to_entries | map(select(.key as $K | $L | has($K) | not)) | map(.key + \"@\" + ($P[.key] // [\"latest\"])[0]) | join(\" \")') && [ ! -z \"$PACKAGES_TO_BUMP\" ] && npm install $PACKAGES_TO_BUMP || true",
+    "postscaffold": "npm run postscaffold:dev --if-present && npm run postscaffold:prod --if-present",
+    "postscaffold:dev": "npm install --save-dev $(cat ../common/package.json | jq -r \".name + \\\"@\\\" + .version\") $(cat ../test-harness/package.json | jq -r \".name + \\\"@\\\" + .version\") @happy-dom/global-registrator @testduet/given-when-then @tsconfig/recommended @tsconfig/strictest @types/node esbuild escape-string-regexp expect prettier publint tsup typescript",
+    "precommit": "npm run precommit:eslint && npm run precommit:publint && npm run precommit:typescript:production && npm run precommit:typescript:test",
+    "precommit:eslint": "ESLINT_USE_FLAT_CONFIG=false eslint ./src/",
+    "precommit:publint": "publint",
+    "precommit:typescript:production": "tsc --noEmit --project ./src/tsconfig.precommit.production.json",
+    "precommit:typescript:test": "tsc --noEmit --project ./src/tsconfig.precommit.test.json",
+    "prepack": "cp ../../CHANGELOG.md . && cp ../../LICENSE . && cp ../../README.md .",
+    "start": "npm run build -- --onSuccess \"touch ../pages/package.json\" --watch",
+    "switch": "cat package.json | jq --arg SWITCH_NAME $SWITCH_NAME -r '(.[\"switch:\" + $SWITCH_NAME] // {}) as $TEMPLATE | .devDependencies += ($TEMPLATE.devDependencies // {}) | .dependencies += ($TEMPLATE.dependencies // {})' | tee ./package.json.tmp && mv ./package.json.tmp ./package.json",
+    "test": "npm run test:unit && npm run test:types",
+    "test:types": "node --experimental-strip-types --import @compulim/test-harness/test-types.import --test **/*.test-types.ts",
+    "test:unit": "node --experimental-strip-types --experimental-test-coverage --experimental-test-isolation=none --test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/compulim/spreadsheet-ui.git"
+  },
+  "bugs": {
+    "url": "https://github.com/compulim/spreadsheet-ui/issues"
+  },
+  "homepage": "https://github.com/compulim/spreadsheet-ui#readme",
+  "localPeerDependencies": {
+    "@compulim/common": "0.0.0-0",
+    "@compulim/test-harness": "0.0.0-0"
+  },
+  "author": "William Wong (https://github.com/compulim)",
+  "devDependencies": {
+    "@compulim/common": "^0.0.0-0",
+    "@compulim/test-harness": "^0.0.0-0",
+    "@happy-dom/global-registrator": "^21.0.4",
+    "@testduet/given-when-then": "^0.1.0",
+    "@tsconfig/recommended": "^1.0.13",
+    "@tsconfig/strictest": "^2.0.8",
+    "@types/node": "^26.6.6",
+    "esbuild": "^0.28.2",
+    "escape-string-regexp": "^4.0.0",
+    "expect": "^30.5.2",
+    "prettier": "^3.9.10",
+    "publint": "^0.3.25",
+    "tsup": "^9.0.0",
+    "typescript": "^6.0.3"
+  },
+  "license": "MIT",
+  "pinDependencies": {}
 }

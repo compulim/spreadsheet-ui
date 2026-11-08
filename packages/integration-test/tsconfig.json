@@ -1,0 +1,12 @@
+// This configuration file is for VSCode only.
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "noEmit": true,
+    "target": "esnext"
+  },
+  "exclude": ["webDriver/**/*"],
+  "extends": "./tsconfig.custom.json"
+}
