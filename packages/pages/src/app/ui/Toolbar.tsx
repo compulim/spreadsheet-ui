@@ -15,7 +15,6 @@ import {
   UndoIcon
 } from '@primer/octicons-react';
 import { ActionBar, ActionList, ActionMenu, SegmentedControl, Text, TextInput, ToggleSwitch } from '@primer/react';
-import { useSyncExternalStore } from 'react';
 import type { RefObject } from 'react';
 import { HIGHLIGHTS } from '../highlights.ts';
 import { parseHighlight } from '../highlight.ts';
@@ -54,11 +53,6 @@ type ToolbarActions = {
   toggleStyle(style: CellStyle): void;
   undo(): void;
   unformat(): void;
-};
-
-type ToolbarStore = {
-  getState(): ToolbarState;
-  subscribe(listener: () => void): () => void;
 };
 
 /** Segments of the alignment control, the first segment is the default (type-based) alignment. */
@@ -104,13 +98,12 @@ const BORDERS: readonly { preset: BorderPreset; label: string }[] = [
 function Toolbar({
   actions,
   returnFocusRef,
-  store
+  state
 }: {
   actions: ToolbarActions;
   returnFocusRef: RefObject<HTMLElement>;
-  store: ToolbarStore;
+  state: ToolbarState;
 }) {
-  const state = useSyncExternalStore(store.subscribe, store.getState);
   const formatLabel = FORMATS.find(({ format }) => format === state.format)?.label ?? 'General';
 
   return (
@@ -297,6 +290,5 @@ export {
   type CellStyle,
   Toolbar,
   type ToolbarActions,
-  type ToolbarState,
-  type ToolbarStore
+  type ToolbarState
 };
