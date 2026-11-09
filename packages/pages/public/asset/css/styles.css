@@ -467,3 +467,21 @@ worksheet-app[hidden] {
 }
 
 /* #endregion */
+
+/* #region Worksheet */
+
+/* Stacks the toolbar and the grid vertically, the grid takes the remaining height. */
+.worksheet {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.worksheet__header {
+  border-bottom: var(--borderWidth-thin, 1px) solid var(--borderColor-default);
+  flex: none;
+  padding: var(--base-size-16);
+}
+
+/* #endregion */
