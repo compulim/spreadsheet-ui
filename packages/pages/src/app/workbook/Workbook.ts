@@ -4,13 +4,8 @@ import { WorksheetEvent } from './WorksheetEvent.ts';
 import { MAX_WORKSHEET_NAME_LENGTH, MAX_WORKSHEETS } from './constants.ts';
 import { sanitizeWorksheetName, validateWorksheetName } from './private/worksheetName.ts';
 
-type WorksheetApp = HTMLElement & { readonly worksheet: Worksheet };
-
 /**
- * A workbook with up to 50 worksheets.
- *
- * Worksheets are created by the workbook. In a browser where `<worksheet-app>` is defined, each worksheet is owned
- * by a newly instantiated `<worksheet-app>` element, see `getWorksheetApp()`.
+ * A workbook with up to 50 worksheets, created by the workbook.
  *
  * Re-dispatches `change` (`WorksheetChangeEvent`) from all of its worksheets, and dispatches
  * `worksheetadd`, `worksheetremove` and `worksheetrename` (`WorksheetEvent`).
@@ -19,8 +14,6 @@ class Workbook extends EventTarget {
   #worksheets: Worksheet[] = [];
 
   #names: Map<Worksheet, string> = new Map();
-
-  #elements: Map<Worksheet, WorksheetApp> = new Map();
 
   #handleChange = (event: Event): void => {
     this.dispatchEvent(new WorksheetChangeEvent('change', event as WorksheetChangeEvent));
@@ -117,15 +110,7 @@ class Workbook extends EventTarget {
   }
 
   /**
-   * Returns the `<worksheet-app>` element owning a worksheet of this workbook, or `undefined` if not found or
-   * `<worksheet-app>` is not defined (e.g. outside of a browser).
-   */
-  getWorksheetApp(worksheet: Worksheet): WorksheetApp | undefined {
-    return this.#elements.get(worksheet);
-  }
-
-  /**
-   * Adds a new worksheet, owned by a newly instantiated `<worksheet-app>` if it is defined.
+   * Adds a new worksheet.
    *
    * @param name Name of the worksheet, default to an unused name.
    * @param index Position of the worksheet, default to the end.
@@ -139,11 +124,8 @@ class Workbook extends EventTarget {
 
     index = Math.max(0, Math.min(index, this.#worksheets.length));
 
-    const element = (globalThis.customElements?.get('worksheet-app') && document.createElement('worksheet-app')) as
-      WorksheetApp | undefined;
-    const worksheet = element ? element.worksheet : new Worksheet();
+    const worksheet = new Worksheet();
 
-    element && this.#elements.set(worksheet, element);
     this.#names.set(worksheet, name);
     this.#worksheets.splice(index, 0, worksheet);
     worksheet.addEventListener('change', this.#handleChange);
@@ -165,8 +147,6 @@ class Workbook extends EventTarget {
     }
 
     this.#worksheets.splice(index, 1);
-    this.#elements.get(worksheet)?.remove();
-    this.#elements.delete(worksheet);
     this.#names.delete(worksheet);
     worksheet.removeEventListener('change', this.#handleChange);
 

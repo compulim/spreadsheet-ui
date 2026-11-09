@@ -3,13 +3,17 @@ import { WorksheetChangeEvent } from './WorksheetChangeEvent.ts';
 import { WorksheetHistory } from './WorksheetHistory.ts';
 import { type CellPosition, type CellRange, WorksheetSelection } from './WorksheetSelection.ts';
 import {
+  array,
   boolean,
   finite,
+  type InferOutput,
   integer,
   is,
+  literal,
   looseObject,
   minValue,
   nullish,
+  object,
   optional,
   number,
   picklist,
@@ -85,6 +89,7 @@ type WorksheetEdit = {
   mergeCells(x: number, y: number, width: number, height?: number): void;
   unmergeCells(x: number, y: number): void;
   loadCSV(text: string): void;
+  loadJSON(json: unknown): void;
 };
 
 const NUMBER_FORMATS = ['currency', 'date', 'datetime', 'duration', 'percent'] as const;
@@ -104,6 +109,55 @@ const formattingInputSchema = nullish(
     format: optional(picklist(NUMBER_FORMATS))
   })
 );
+
+const positiveIntegerSchema = pipe(number(), integer(), minValue(1));
+const worksheetJSONSchema = object({
+  version: literal(1),
+  columnCount: positiveIntegerSchema,
+  rowCount: positiveIntegerSchema,
+  columnWidths: array(nonNegativeFiniteSchema),
+  cells: array(
+    object({
+      x: nonNegativeIntegerSchema,
+      y: nonNegativeIntegerSchema,
+      value: union([boolean(), pipe(number(), finite()), string()]),
+      formatting: optional(formattingInputSchema)
+    })
+  ),
+  borders: array(
+    object({
+      x: nonNegativeIntegerSchema,
+      y: nonNegativeIntegerSchema,
+      top: optional(boolean()),
+      left: optional(boolean())
+    })
+  ),
+  merges: array(
+    object({
+      x: nonNegativeIntegerSchema,
+      y: nonNegativeIntegerSchema,
+      width: positiveIntegerSchema,
+      height: positiveIntegerSchema
+    })
+  )
+});
+
+/**
+ * Serialized worksheet, as returned by `toJSON()`. UI states (selection and undo history) are not included.
+ */
+type WorksheetJSON = InferOutput<typeof worksheetJSONSchema>;
+
+function parseWorksheetJSON(json: unknown): WorksheetJSON {
+  const result = safeParse(worksheetJSONSchema, json);
+
+  if (!result.success) {
+    const path = result.issues[0].path?.map(({ key }) => String(key)).join('.');
+
+    throw new TypeError(`Invalid worksheet JSON${path ? ` at "${path}"` : ''}: ${result.issues[0].message}`);
+  }
+
+  return result.output;
+}
 
 /**
  * `align` is `undefined` when not set: text is aligned left, numbers right and booleans center.
@@ -1036,6 +1090,100 @@ class Worksheet extends EventTarget {
     (this.#transaction as { load: boolean }).load = true;
   }
 
+  /**
+   * Serializes the worksheet into a JSON-compatible object: values, formattings, borders, merged cells and column
+   * widths. UI states (selection and undo history) are not included.
+   */
+  toJSON(): WorksheetJSON {
+    const cells: WorksheetJSON['cells'] = [];
+
+    this.#rows.forEach((row, y) =>
+      row!.forEach((value, x) => {
+        const stored = this.#formattings.get(y * this.columnCount + x);
+
+        cells.push(stored ? { x, y, value, formatting: toCellFormatting(stored) } : { x, y, value });
+      })
+    );
+
+    // Sorted by key, so the output does not depend on the order of edits.
+    const sortedKeys = <T>(map: Map<number, T>) => [...map.keys()].sort((a, b) => a - b);
+
+    return {
+      version: 1,
+      columnCount: this.columnCount,
+      rowCount: this.rowCount,
+      columnWidths: [...this.#columnWidths],
+      cells,
+      borders: sortedKeys(this.#borders).map(key => {
+        const { top, left } = this.#borders.get(key)!;
+
+        return { x: key % this.columnCount, y: Math.floor(key / this.columnCount), top, left };
+      }),
+      merges: sortedKeys(this.#merges).map(key => ({
+        x: key % this.columnCount,
+        y: Math.floor(key / this.columnCount),
+        ...this.#merges.get(key)!
+      }))
+    };
+  }
+
+  /**
+   * Creates a worksheet from an object returned by `toJSON()`.
+   */
+  static fromJSON(json: unknown): Worksheet {
+    const { columnCount, rowCount } = parseWorksheetJSON(json);
+    const worksheet = new Worksheet({ columnCount, rowCount });
+
+    worksheet.edit(edit => edit.loadJSON(json));
+
+    return worksheet;
+  }
+
+  /**
+   * Replaces the content of this worksheet with an object returned by `toJSON()`. Cells outside of this worksheet
+   * throw. The `change` event of the transaction has `load` set to `true`, as loading is not meant to be undoable.
+   * Column widths are set after the content is loaded and are not rolled back.
+   */
+  #loadJSON(json: unknown): void {
+    const { cells, borders, merges, columnWidths } = parseWorksheetJSON(json);
+
+    for (const { x, y } of this.getMerges()) {
+      this.#setMerge(x, y, undefined);
+    }
+
+    for (const [key, { top, left }] of [...this.#borders]) {
+      const x = key % this.columnCount;
+      const y = Math.floor(key / this.columnCount);
+
+      top && this.#setStoredEdge(x, y, 'top', false);
+      left && this.#setStoredEdge(x, y, 'left', false);
+    }
+
+    const { width, height } = this.#getUsedSize();
+
+    width && height && this.#setValues(() => '', 0, 0, width, height);
+
+    for (const { x, y, value, formatting } of cells) {
+      this.#setValue(x, y, value);
+      formatting && this.#setFormatting(x, y, formatting as FormattingInput);
+    }
+
+    for (const { x, y, top, left } of borders) {
+      this.#assertCell(x, y);
+      top && this.#setStoredEdge(x, y, 'top', true);
+      left && this.#setStoredEdge(x, y, 'left', true);
+    }
+
+    for (const { x, y, width, height } of merges) {
+      this.#assertCell(x, y);
+      this.#setMerge(x, y, { width, height });
+    }
+
+    (this.#transaction as { load: boolean }).load = true;
+
+    columnWidths.slice(0, this.columnCount).forEach((width, x) => this.setColumnWidth(x, width));
+  }
+
   #record(change: WorksheetChange): void {
     (this.#transaction as { changes: WorksheetChange[] }).changes.push(change);
   }
@@ -1061,7 +1209,8 @@ class Worksheet extends EventTarget {
       setBorder: this.#setBorder,
       mergeCells: this.#mergeCells,
       unmergeCells: this.#unmergeCells,
-      loadCSV: this.#loadCSV
+      loadCSV: this.#loadCSV,
+      loadJSON: this.#loadJSON
     };
 
     const edit = Object.freeze(
@@ -1223,6 +1372,7 @@ export {
   Worksheet,
   type WorksheetChange,
   type WorksheetEdit,
+  type WorksheetJSON,
   type WorksheetRedo,
   type WorksheetUndo
 };

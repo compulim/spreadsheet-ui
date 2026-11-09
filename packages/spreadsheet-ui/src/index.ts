@@ -20,6 +20,7 @@ export {
   Worksheet,
   type WorksheetChange,
   type WorksheetEdit,
+  type WorksheetJSON,
   type WorksheetRedo,
   type WorksheetUndo
 } from './Worksheet.ts';
