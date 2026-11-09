@@ -9,6 +9,7 @@ import { HIGHLIGHTS } from '../highlights.ts';
 import { cellsToPNG } from '../printCells.ts';
 import type { Workbook } from '../workbook/Workbook.ts';
 import { Toolbar } from './Toolbar.tsx';
+import { useWorkbookContext } from './WorkbookProvider.tsx';
 import type { BorderPreset, CellStyle, ToolbarActions, ToolbarState } from './Toolbar.tsx';
 import type {
   BorderEdges,
@@ -94,12 +95,12 @@ type WorksheetViewProps = {
   worksheet: Worksheet | undefined;
 };
 
-/** A worksheet, with its toolbar, editing a copy of `worksheet` and saving every change back to it. */
+/**
+ * A worksheet, with its toolbar, editing a copy of `worksheet`. Loads the JSON of the worksheet from `WorkbookProvider`
+ * when mounted, and saves it back when unmounted.
+ */
 function WorksheetView({ onOpen, onSaveZip, workbook, worksheet: activeWorksheet }: WorksheetViewProps) {
-  /**
-   * The single `<worksheet-app>`, editing a copy of the active worksheet. Its worksheet is loaded from the active
-   * worksheet of the workbook when activated, and every change is saved back to the workbook.
-   */
+  /** The `<worksheet-app>`, editing a copy of the worksheet. */
   const elementRef = useRef<WorksheetApp | undefined>(undefined);
 
   if (!elementRef.current) {
@@ -115,19 +116,14 @@ function WorksheetView({ onOpen, onSaveZip, workbook, worksheet: activeWorksheet
   /** Bumped when the worksheet of `element`, or its selection, changes. */
   const [revision, setRevision] = useState(0);
 
-  const activeWorksheetRef = useRef(activeWorksheet);
+  const { getWorksheetJSON, setWorksheetJSON } = useWorkbookContext();
   const gridContainerRef = useRef<HTMLDivElement>(null);
-  /** Whether `element` is loading the active worksheet, its changes do not need to be saved back. */
-  const loadingRef = useRef(false);
   const lockedRef = useRef(locked);
   // Menus return focus to the grid after closing.
   const returnFocusRef = useRef<HTMLElement>(element);
   const statusTimeoutRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-  const workbookRef = useRef(workbook);
 
-  activeWorksheetRef.current = activeWorksheet;
   lockedRef.current = locked;
-  workbookRef.current = workbook;
 
   const refresh = useCallback(() => setRevision(revision => revision + 1), []);
 
@@ -145,56 +141,43 @@ function WorksheetView({ onOpen, onSaveZip, workbook, worksheet: activeWorksheet
 
   useEffect(() => {
     const worksheet = element.worksheet;
-    const save = () => {
-      const activeWorksheet = activeWorksheetRef.current;
-
-      if (!loadingRef.current && activeWorksheet && workbookRef.current.indexOf(activeWorksheet) !== -1) {
-        const json = worksheet.toJSON();
-
-        activeWorksheet.edit(edit => edit.loadJSON(json));
-      }
-    };
-    const handleChange = () => {
-      save();
-      refresh();
-    };
     const handleLockEdit = () => showStatus('Some cells are locked and cannot be edited.');
 
-    worksheet.addEventListener('change', handleChange);
-    worksheet.addEventListener('columnwidthchange', save);
+    worksheet.addEventListener('change', refresh);
     worksheet.addEventListener('selectionchange', refresh);
     worksheet.addEventListener('historychange', refresh);
     element.addEventListener('lockedit', handleLockEdit);
 
     return () => {
-      worksheet.removeEventListener('change', handleChange);
-      worksheet.removeEventListener('columnwidthchange', save);
+      worksheet.removeEventListener('change', refresh);
       worksheet.removeEventListener('selectionchange', refresh);
       worksheet.removeEventListener('historychange', refresh);
       element.removeEventListener('lockedit', handleLockEdit);
     };
   }, [element, refresh, showStatus]);
 
-  // Loads the active worksheet into `element`.
+  // Loads the worksheet from the provider when mounted, and saves it back when unmounted.
   useEffect(() => {
     if (!activeWorksheet) {
       return;
     }
 
-    const json = activeWorksheet.toJSON();
+    const json = getWorksheetJSON(activeWorksheet);
 
-    loadingRef.current = true;
-
-    try {
-      element.worksheet.edit(edit => edit.loadJSON(json));
-    } finally {
-      loadingRef.current = false;
-    }
+    element.worksheet.edit(edit => edit.loadJSON(json));
 
     // Fires "selectionchange", which refreshes the toolbar.
     element.worksheet.selection = new WorksheetSelection({ column: 0, row: 0 });
     element.focus();
-  }, [activeWorksheet, element]);
+
+    return () => setWorksheetJSON(activeWorksheet, element.worksheet.toJSON());
+  }, [activeWorksheet, element, getWorksheetJSON, setWorksheetJSON]);
+
+  const saveZip = useCallback(() => {
+    // Saves to the provider first, so the ZIP includes the latest changes of this worksheet.
+    activeWorksheet && setWorksheetJSON(activeWorksheet, element.worksheet.toJSON());
+    onSaveZip();
+  }, [activeWorksheet, element, onSaveZip, setWorksheetJSON]);
 
   useEffect(() => {
     element.toggleAttribute('locked', locked);
@@ -357,7 +340,7 @@ function WorksheetView({ onOpen, onSaveZip, workbook, worksheet: activeWorksheet
       print: printSelection,
       redo: () => undoOrRedo('redo'),
       saveCSV,
-      saveZip: onSaveZip,
+      saveZip,
       setAlign: align => formatSelection(formatting => ({ ...formatting, align })),
       setBorder,
       setFormat: format => formatSelection(formatting => ({ ...formatting, format })),
@@ -373,9 +356,9 @@ function WorksheetView({ onOpen, onSaveZip, workbook, worksheet: activeWorksheet
       handleLockedChange,
       mergeSelection,
       onOpen,
-      onSaveZip,
       printSelection,
       saveCSV,
+      saveZip,
       setBorder,
       toggleStyle,
       undoOrRedo

@@ -5,8 +5,23 @@ import { download } from '../download.ts';
 import { MAX_WORKSHEETS } from '../workbook/constants.ts';
 import { Workbook } from '../workbook/Workbook.ts';
 import { SheetBar } from './SheetBar.tsx';
+import { useWorkbookContext } from './WorkbookProvider.tsx';
 import { WorksheetView } from './WorksheetView.tsx';
 import type { Worksheet } from '@compulim/spreadsheet-ui';
+
+const worksheetKeys = new WeakMap<Worksheet, number>();
+let nextWorksheetKey = 0;
+
+/** Returns a unique key of the worksheet, for remounting `WorksheetView`. */
+function getWorksheetKey(worksheet: Worksheet): number {
+  let key = worksheetKeys.get(worksheet);
+
+  if (key === undefined) {
+    worksheetKeys.set(worksheet, (key = nextWorksheetKey++));
+  }
+
+  return key;
+}
 
 function createWorkbook() {
   const workbook = new Workbook();
@@ -23,6 +38,7 @@ function WorkbookView() {
   /** Bumped when worksheets of the workbook are added, removed or renamed. */
   const [tabsRevision, setTabsRevision] = useState(0);
 
+  const { flush } = useWorkbookContext();
   const activeWorksheetRef = useRef(activeWorksheet);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -57,12 +73,14 @@ function WorkbookView() {
   const handleOpen = useCallback(() => fileInputRef.current?.click(), []);
 
   const handleSaveZip = useCallback(async () => {
+    flush();
+
     try {
       download(new Blob([(await workbook.toZip()) as BlobPart], { type: 'application/zip' }), 'workbook.zip');
     } catch (error) {
       alert(`Failed to save workbook: ${(error as Error).message}`);
     }
-  }, [workbook]);
+  }, [flush, workbook]);
 
   const handleFileChange = useCallback(
     async (event: ChangeEvent<HTMLInputElement>) => {
@@ -160,6 +178,8 @@ function WorkbookView() {
       <PageLayout className="app__layout" columnGap="none" containerWidth="full" padding="none" rowGap="none">
         <PageLayout.Content className="app__content" padding="none" width="full">
           <WorksheetView
+            // Remounts on switching worksheet, to save the previous worksheet and load the next one.
+            key={activeWorksheet && getWorksheetKey(activeWorksheet)}
             onOpen={handleOpen}
             onSaveZip={handleSaveZip}
             workbook={workbook}
