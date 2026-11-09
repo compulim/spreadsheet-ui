@@ -27,3 +27,5 @@ export {
 export { WorksheetApp } from './WorksheetApp.ts';
 export { WorksheetChangeEvent } from './WorksheetChangeEvent.ts';
 export { type CellPosition, type CellRange, WorksheetSelection } from './WorksheetSelection.ts';
+
+import './index.css';

@@ -27,7 +27,8 @@
     "packages/test-harness",
     "packages/spreadsheet-ui",
     "packages/integration-test",
-    "packages/pages"
+    "packages/pages",
+    "packages/pages2"
   ],
   "author": "William Wong (https://github.com/compulim)",
   "license": "MIT",

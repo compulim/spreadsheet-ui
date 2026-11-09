@@ -1,0 +1,23 @@
+{
+  "name": "@compulim/pages2",
+  "version": "0.0.0-0",
+  "description": "",
+  "license": "MIT",
+  "author": "",
+  "type": "module",
+  "scripts": {
+    "build": "esbuild ./src/index.tsx --define:IS_DEVELOPMENT=true --entry-names=[ext]/[name] --bundle --outdir=./public/static/ --target=chrome150",
+    "start": "npm run build -- --serve=5000 --servedir=./public/ --watch"
+  },
+  "dependencies": {
+    "@compulim/spreadsheet-ui": "^0.0.0-0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
+  },
+  "devDependencies": {
+    "@tsconfig/strictest": "^2.0.8",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "esbuild": "^0.28.2"
+  }
+}
